@@ -23,20 +23,13 @@ class ExamListScreen extends StatefulWidget {
 
 class _ExamListScreenState extends State<ExamListScreen> {
   late Future<ApiResponse<PagedList<ArchiveModel>>> archivedExamsFuture;
-
   late List<ArchiveModel> filteredExams;
+  late int count = 0;
 
   String searchQuery = '';
   String selectedFilter = 'all';
-  String selectedSort = 'recent';
+  final List<String> filterOptions = ['all', 'mcq', 'cq'];
 
-  final List<String> filterOptions = ['all', 'mcq', 'cq', 'mixed'];
-  final List<String> sortOptions = [
-    'recent',
-    'oldest',
-    'score_high',
-    'score_low',
-  ];
 
   @override
   void initState() {
@@ -48,6 +41,13 @@ class _ExamListScreenState extends State<ExamListScreen> {
     // filteredExams = List.from(allArchivedExamsFuture);
     // filteredExams = archivedExamsFuture
     // filteredExams = List.from([]);
+    archivedExamsFuture.then((response) {
+      if (mounted && response.data != null) {
+        setState(() {
+          count = response.data!.items.length;
+        });
+      }
+    });
   }
 
   void _applyFiltersAndSearch() {
@@ -121,7 +121,7 @@ class _ExamListScreenState extends State<ExamListScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '12 exams available',
+                          '$count exams available',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Color(0xFF9EA7B5),
@@ -180,119 +180,51 @@ class _ExamListScreenState extends State<ExamListScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
-                children: [
-                  // Filter Dropdown
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.grey, // border color
-                          width: 1.0, // border width
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            // corrected from withValues
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                children: filterOptions.map((filter) {
+                  final bool isSelected = selectedFilter == filter;
+                  final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedFilter = filter;
+                        });
+                        _applyFiltersAndSearch();
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          // Active color vs Inactive color
+                          color: isSelected
+                              ? (isDark ? Colors.blue.shade700 : Colors.blue.shade600)
+                              : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? (isDark ? Colors.blue.shade400 : Colors.blue.shade700)
+                                : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                            width: 1,
                           ),
-                        ],
-                      ),
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: selectedFilter,
-                        underline: const SizedBox(),
-                        items: filterOptions
-                            .map(
-                              (filter) => DropdownMenuItem(
-                                value: filter,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(left: 12),
-                                  child: Text(
-                                    filter == 'all'
-                                        ? '📋 All'
-                                        : filter == 'mcq'
-                                        ? '🧩 MCQ'
-                                        : filter == 'cq'
-                                        ? '✍️ CQ'
-                                        : '📝 Mixed',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            selectedFilter = value;
-                            _applyFiltersAndSearch();
-                          }
-                        },
+                        ),
+                        child: Center(
+                          child: Text(
+                            filter.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              // Text color adaptivity
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  // Sort Dropdown
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.grey, // border color
-                          width: 1.0, // border width
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            // corrected from withValues
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: selectedSort,
-                        underline: const SizedBox(),
-                        items: sortOptions
-                            .map(
-                              (sort) => DropdownMenuItem(
-                                value: sort,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(left: 12),
-                                  child: Text(
-                                    sort == 'recent'
-                                        ? '🕐 Recent'
-                                        : sort == 'oldest'
-                                        ? '📅 Oldest'
-                                        : sort == 'score_high'
-                                        ? '📈 Best Score'
-                                        : '📉 Low Score',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            selectedSort = value;
-                            _applyFiltersAndSearch();
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
             ),
 
@@ -335,17 +267,22 @@ class _ExamListScreenState extends State<ExamListScreen> {
                     final items = snapshot.data!.data!.items;
 
                     return GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.95,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
                       ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 0.95,
+                          ),
                       itemCount: items.length,
                       itemBuilder: (context, index) {
                         final item = items[index];
-                        final isDark = Theme.of(context).brightness == Brightness.dark;
+                        final isDark =
+                            Theme.of(context).brightness == Brightness.dark;
 
                         return GestureDetector(
                           onTap: () {
@@ -382,17 +319,17 @@ class _ExamListScreenState extends State<ExamListScreen> {
                                 end: Alignment.bottomRight,
                                 colors: isDark
                                     ? [
-                                  Colors.grey.shade900,
-                                  Colors.grey.shade900,
-                                  Colors.grey.shade900,
-                                  Colors.grey.shade800,
-                                ]
+                                        Colors.grey.shade900,
+                                        Colors.grey.shade900,
+                                        Colors.grey.shade900,
+                                        Colors.grey.shade800,
+                                      ]
                                     : [
-                                  Colors.white,
-                                  Colors.white,
-                                  Colors.white,
-                                  Colors.grey.shade50,
-                                ],
+                                        Colors.white,
+                                        Colors.white,
+                                        Colors.white,
+                                        Colors.grey.shade50,
+                                      ],
                               ),
                             ),
                             child: ClipRRect(
@@ -407,7 +344,9 @@ class _ExamListScreenState extends State<ExamListScreen> {
                                       width: 100,
                                       height: 100,
                                       decoration: BoxDecoration(
-                                        color: Colors.blue.withOpacity(isDark ? 0.1 : 0.05),
+                                        color: Colors.blue.withOpacity(
+                                          isDark ? 0.1 : 0.05,
+                                        ),
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -416,49 +355,73 @@ class _ExamListScreenState extends State<ExamListScreen> {
                                   Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         // Header with icon and type badge
                                         Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
                                               children: [
                                                 // Type icon
                                                 Container(
-                                                  padding: const EdgeInsets.all(10),
+                                                  padding: const EdgeInsets.all(
+                                                    10,
+                                                  ),
                                                   decoration: BoxDecoration(
-                                                    color: Colors.blue.withOpacity(
-                                                        isDark ? 0.2 : 0.1),
-                                                    borderRadius: BorderRadius.circular(12),
+                                                    color: Colors.blue
+                                                        .withOpacity(
+                                                          isDark ? 0.2 : 0.1,
+                                                        ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
                                                   ),
                                                   child: Text(
-                                                    "📝", // or _getTypeIcon(item.type)
-                                                    style: const TextStyle(fontSize: 20),
+                                                    "📝",
+                                                    // or _getTypeIcon(item.type)
+                                                    style: const TextStyle(
+                                                      fontSize: 20,
+                                                    ),
                                                   ),
                                                 ),
                                                 // Type badge
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 6,
-                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 6,
+                                                      ),
                                                   decoration: BoxDecoration(
                                                     color: isDark
                                                         ? Colors.blue.shade900
-                                                        : const Color(0xFFF1F5F9),
-                                                    borderRadius: BorderRadius.circular(20),
+                                                        : const Color(
+                                                            0xFFF1F5F9,
+                                                          ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          20,
+                                                        ),
                                                   ),
                                                   child: Text(
                                                     "Exam",
                                                     style: TextStyle(
                                                       fontSize: 10,
-                                                      fontWeight: FontWeight.w700,
+                                                      fontWeight:
+                                                          FontWeight.w700,
                                                       color: isDark
                                                           ? Colors.blue.shade200
-                                                          : const Color(0xFF475569),
+                                                          : const Color(
+                                                              0xFF475569,
+                                                            ),
                                                       letterSpacing: 0.5,
                                                     ),
                                                   ),
@@ -472,7 +435,9 @@ class _ExamListScreenState extends State<ExamListScreen> {
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w700,
-                                                color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                                color: isDark
+                                                    ? Colors.white
+                                                    : const Color(0xFF1E293B),
                                               ),
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
@@ -481,7 +446,8 @@ class _ExamListScreenState extends State<ExamListScreen> {
                                         ),
                                         // Bottom stats
                                         Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Divider(
                                               color: isDark
@@ -501,18 +467,27 @@ class _ExamListScreenState extends State<ExamListScreen> {
                                                         Icons.schedule,
                                                         size: 14,
                                                         color: isDark
-                                                            ? Colors.grey.shade400
-                                                            : const Color(0xFF94A3B8),
+                                                            ? Colors
+                                                                  .grey
+                                                                  .shade400
+                                                            : const Color(
+                                                                0xFF94A3B8,
+                                                              ),
                                                       ),
                                                       const SizedBox(width: 4),
                                                       Text(
                                                         '20 m',
                                                         style: TextStyle(
                                                           fontSize: 12,
-                                                          fontWeight: FontWeight.w600,
+                                                          fontWeight:
+                                                              FontWeight.w600,
                                                           color: isDark
-                                                              ? Colors.grey.shade300
-                                                              : const Color(0xFF64748B),
+                                                              ? Colors
+                                                                    .grey
+                                                                    .shade300
+                                                              : const Color(
+                                                                  0xFF64748B,
+                                                                ),
                                                         ),
                                                       ),
                                                     ],
@@ -522,21 +497,31 @@ class _ExamListScreenState extends State<ExamListScreen> {
                                                   child: Row(
                                                     children: [
                                                       Icon(
-                                                        Icons.check_circle_outline,
+                                                        Icons
+                                                            .check_circle_outline,
                                                         size: 14,
                                                         color: isDark
-                                                            ? Colors.green.shade400
-                                                            : Colors.green.shade600,
+                                                            ? Colors
+                                                                  .green
+                                                                  .shade400
+                                                            : Colors
+                                                                  .green
+                                                                  .shade600,
                                                       ),
                                                       const SizedBox(width: 4),
                                                       Text(
                                                         '35 Q',
                                                         style: TextStyle(
                                                           fontSize: 12,
-                                                          fontWeight: FontWeight.w700,
+                                                          fontWeight:
+                                                              FontWeight.w700,
                                                           color: isDark
-                                                              ? Colors.green.shade400
-                                                              : Colors.green.shade600,
+                                                              ? Colors
+                                                                    .green
+                                                                    .shade400
+                                                              : Colors
+                                                                    .green
+                                                                    .shade600,
                                                         ),
                                                       ),
                                                     ],
