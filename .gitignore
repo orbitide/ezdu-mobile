@@ -25,3 +25,5 @@ doc/api/
 android/app/google-services.json
 
 lib/data/firebase_options.dart
+
+android/.gradle/
